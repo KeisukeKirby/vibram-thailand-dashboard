@@ -265,6 +265,12 @@ function appendData(data, filename) {
         if (headers.length >= 11) {
             colAmount = headers[10];
         }
+    } else if (filename.toLowerCase().startsWith('sale vff siam dis') || filename.toLowerCase().startsWith('sales vff siam dis')) {
+        storeName = 'Siam Dis';
+        // Force Amount column to be Column I (index 8) for Siam Dis files
+        if (headers.length >= 9) {
+            colAmount = headers[8];
+        }
     } else if (filename.toLowerCase().startsWith('sale vff consignment')) {
         storeName = 'Consignment';
         // Force Amount column to be Column L (index 11) for Consignment files
@@ -449,6 +455,8 @@ function renderDashboard() {
                 item.store = 'Central LP 3F';
             } else if (lowerStore.startsWith('sale vff central lardprao') || lowerStore.startsWith('sales vff central lardprao')) {
                 item.store = 'Central LP';
+            } else if (lowerStore.startsWith('sale vff siam dis') || lowerStore.startsWith('sales vff siam dis')) {
+                item.store = 'Siam Dis';
             } else if (lowerStore.startsWith('sale vff consignment')) {
                 item.store = 'Consignment';
             } else if (lowerStore.startsWith('sale vff kvillage') || lowerStore.startsWith('sales vff kvillage')) {
