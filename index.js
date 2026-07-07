@@ -272,8 +272,29 @@ function appendData(data, filename) {
             colAmount = headers[10];
         }
     }
+    
+    let isOnlineFile = false;
+    if (filename.toLowerCase().startsWith('sale vff online') || filename.toLowerCase().startsWith('sales vff online')) {
+        isOnlineFile = true;
+    }
 
     data.forEach(row => {
+        let rowStoreName = storeName;
+        if (isOnlineFile) {
+            let channel = (headers.length >= 2) ? row[headers[1]] : '';
+            if (channel) {
+                let lowerChannel = String(channel).toLowerCase().trim();
+                if (lowerChannel === 'lazada') {
+                    rowStoreName = 'Lazada';
+                } else if (lowerChannel === 'shopee vff') {
+                    rowStoreName = 'Shopee';
+                } else {
+                    rowStoreName = 'LINE+';
+                }
+            } else {
+                rowStoreName = 'LINE+';
+            }
+        }
         let rawProduct = row[colProduct] || 'Unknown';
         rawProduct = rawProduct.replace(/VFF\s?/gi, '').trim();
         let baseModel = rawProduct.replace(/\s*\(.*\)/, '').trim();
@@ -305,7 +326,7 @@ function appendData(data, filename) {
             baseModel: baseModel,
             qty: qty,
             amt: amt,
-            store: storeName
+            store: rowStoreName
         });
     });
 
@@ -404,6 +425,10 @@ function renderDashboard() {
                 item.store = 'Central EV';
             } else if (lowerStore.startsWith('sale vff central world') || lowerStore.startsWith('sales vff central world')) {
                 item.store = 'Central W';
+            } else if (lowerStore.startsWith('sale vff online') || lowerStore.startsWith('sales vff online')) {
+                // We cannot determine exact channel (Lazada/Shopee/LINE+) from legacy store string without raw row data.
+                // It will be treated as LINE+ as a fallback for old cached data until they re-upload.
+                item.store = 'LINE+';
             }
         }
         
