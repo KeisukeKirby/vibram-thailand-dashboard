@@ -193,8 +193,14 @@ function appendData(data, filename) {
         if (headers.length >= 12) {
             colAmount = headers[11];
         }
-    } else if (filename.toLowerCase().startsWith('sale vff kvillage')) {
+    } else if (filename.toLowerCase().startsWith('sale vff kvillage') || filename.toLowerCase().startsWith('sales vff kvillage')) {
         storeName = 'K Village';
+    } else if (filename.toLowerCase().startsWith('sale vff central chidlom') || filename.toLowerCase().startsWith('sales vff central chidlom')) {
+        storeName = 'Central CL';
+        // Force Amount column to be Column K (index 10) for Central CHIDLOM files
+        if (headers.length >= 11) {
+            colAmount = headers[10];
+        }
     }
 
     data.forEach(row => {
