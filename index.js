@@ -1,6 +1,10 @@
 // Chart instances
 let trendChartInstance = null;
 let productChartInstance = null;
+let storeChartInstance = null;
+
+// Global data store
+let globalSalesData = [];
 
 // Initialize charts with empty data
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +13,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // File upload event listener
     const uploadInput = document.getElementById('csv-upload');
     uploadInput.addEventListener('change', handleFileUpload);
+    
+    // Clear data event listener
+    const clearBtn = document.getElementById('clear-data-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearData);
+    }
+    
+    // Load existing data from localStorage
+    loadDataFromStorage();
 });
 
 function initCharts() {
@@ -50,6 +63,23 @@ function initCharts() {
             borderWidth: 0
         }
     });
+    
+    const storeCtx = document.getElementById('storeChart').getContext('2d');
+    storeChartInstance = new Chart(storeCtx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+                x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+            }
+        }
+    });
 }
 
 function handleFileUpload(event) {
@@ -63,9 +93,9 @@ function handleFileUpload(event) {
         skipEmptyLines: true,
         complete: function(results) {
             if (results.data && results.data.length > 0) {
-                processData(results.data);
-                document.getElementById('upload-status').textContent = `Loaded: ${file.name}`;
-                document.getElementById('data-period').textContent = `Data imported successfully (${results.data.length} records)`;
+                appendData(results.data, file.name);
+                document.getElementById('upload-status').textContent = `Last loaded: ${file.name}`;
+                event.target.value = ''; // Reset file input
             } else {
                 alert("The CSV file is empty or invalid.");
             }
@@ -100,7 +130,7 @@ function findColumn(headers, keywords) {
     return null;
 }
 
-function processData(data) {
+function appendData(data, filename) {
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
 
@@ -114,17 +144,13 @@ function processData(data) {
     const colQuantity = findColumn(headers, quantityKws);
     const colAmount = findColumn(headers, amountKws);
     const colDate = findColumn(headers, dateKws);
+    
+    // Determine store name from filename
+    let storeName = filename.replace(/\.[^/.]+$/, ""); // strip extension
+    if (filename.toLowerCase().startsWith('sale vff cart lp')) {
+        storeName = 'Central LP Cart';
+    }
 
-    let totalRevenue = 0;
-    let totalQuantity = 0;
-    
-    // Aggregation maps
-    const salesByDate = {};
-    const salesByProduct = {};
-    
-    // Process rows
-    const validData = [];
-    
     data.forEach(row => {
         const product = row[colProduct] || 'Unknown';
         
@@ -159,25 +185,105 @@ function processData(data) {
                 dateKey = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD for correct sorting
             }
         }
-
-        totalRevenue += amt;
-        totalQuantity += qty;
         
-        // Aggregate Date
-        if (!salesByDate[dateKey]) salesByDate[dateKey] = 0;
-        salesByDate[dateKey] += amt;
-        
-        // Aggregate Product
-        if (!salesByProduct[product]) salesByProduct[product] = { amt: 0, qty: 0 };
-        salesByProduct[product].amt += amt;
-        salesByProduct[product].qty += qty;
-        
-        validData.push({
-            date: rawDate,
+        globalSalesData.push({
+            date: dateKey,
+            rawDate: rawDate,
             product: product,
             qty: qty,
-            amt: amt
+            amt: amt,
+            store: storeName
         });
+    });
+
+    saveDataToStorage();
+    renderDashboard();
+}
+
+function saveDataToStorage() {
+    try {
+        localStorage.setItem('vibram_dashboard_data', JSON.stringify(globalSalesData));
+    } catch (e) {
+        console.error("Local storage quota exceeded or error", e);
+        alert("Warning: Could not save data locally. The file might be too large.");
+    }
+}
+
+function loadDataFromStorage() {
+    const saved = localStorage.getItem('vibram_dashboard_data');
+    if (saved) {
+        try {
+            globalSalesData = JSON.parse(saved);
+            document.getElementById('upload-status').textContent = `Loaded from saved data`;
+            renderDashboard();
+        } catch(e) {
+            console.error("Failed to parse saved data", e);
+        }
+    } else {
+        renderDashboard(); // Render empty state
+    }
+}
+
+function clearData() {
+    if (confirm("Are you sure you want to clear all accumulated dashboard data?")) {
+        globalSalesData = [];
+        localStorage.removeItem('vibram_dashboard_data');
+        document.getElementById('upload-status').textContent = `No data loaded`;
+        renderDashboard();
+    }
+}
+
+function renderDashboard() {
+    if (globalSalesData.length === 0) {
+        // Reset everything if empty
+        document.getElementById('kpi-revenue').textContent = '฿0';
+        document.getElementById('kpi-quantity').textContent = '0';
+        document.getElementById('kpi-top-product').textContent = '-';
+        document.getElementById('kpi-peak-date').textContent = '-';
+        document.getElementById('data-period').textContent = 'Upload CSV data to begin analysis';
+        document.getElementById('table-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Upload data to view transactions</td></tr>';
+        
+        trendChartInstance.data.labels = [];
+        trendChartInstance.data.datasets = [];
+        trendChartInstance.update();
+        
+        productChartInstance.data.labels = [];
+        productChartInstance.data.datasets = [];
+        productChartInstance.update();
+        
+        storeChartInstance.data.labels = [];
+        storeChartInstance.data.datasets = [];
+        storeChartInstance.update();
+        
+        return;
+    }
+    
+    document.getElementById('data-period').textContent = `Analyzing ${globalSalesData.length.toLocaleString()} total records`;
+
+    let totalRevenue = 0;
+    let totalQuantity = 0;
+    
+    // Aggregation maps
+    const salesByDate = {};
+    const salesByProduct = {};
+    const salesByStore = {};
+    
+    globalSalesData.forEach(item => {
+        totalRevenue += item.amt;
+        totalQuantity += item.qty;
+        
+        // Aggregate Date
+        if (!salesByDate[item.date]) salesByDate[item.date] = 0;
+        salesByDate[item.date] += item.amt;
+        
+        // Aggregate Product
+        if (!salesByProduct[item.product]) salesByProduct[item.product] = { amt: 0, qty: 0 };
+        salesByProduct[item.product].amt += item.amt;
+        salesByProduct[item.product].qty += item.qty;
+        
+        // Aggregate Store
+        if (!salesByStore[item.store]) salesByStore[item.store] = 0;
+        salesByStore[item.store] += item.amt;
     });
 
     // Sort dates
@@ -235,17 +341,29 @@ function processData(data) {
         borderColor: 'transparent'
     }];
     productChartInstance.update();
+    
+    // Update Store Chart
+    const sortedStores = Object.keys(salesByStore).sort((a, b) => salesByStore[b] - salesByStore[a]);
+    storeChartInstance.data.labels = sortedStores;
+    storeChartInstance.data.datasets = [{
+        label: 'Sales by Store',
+        data: sortedStores.map(s => salesByStore[s]),
+        backgroundColor: '#10b981',
+        borderColor: 'transparent',
+        borderRadius: 4
+    }];
+    storeChartInstance.update();
 
     // Update Table (Last 10 transactions)
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
     
-    // show last 10 (or first 10 if not sorted by time, just take last 10 of validData)
-    const recent = validData.slice(-10).reverse();
+    const recent = globalSalesData.slice(-10).reverse();
     recent.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.date}</td>
+            <td>${item.rawDate}</td>
+            <td>${item.store}</td>
             <td>${item.product}</td>
             <td>${item.qty}</td>
             <td>฿${item.amt.toLocaleString()}</td>
