@@ -22,6 +22,43 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load existing data from localStorage
     loadDataFromStorage();
+    
+    // Tab switching event listeners
+    const tabDashboard = document.getElementById('tab-dashboard');
+    const tabProducts = document.getElementById('tab-products');
+    const viewDashboard = document.getElementById('dashboard-view');
+    const viewProducts = document.getElementById('product-view');
+    
+    if (tabDashboard && tabProducts) {
+        tabDashboard.addEventListener('click', () => {
+            tabDashboard.classList.add('active');
+            tabProducts.classList.remove('active');
+            tabDashboard.style.borderBottomColor = '#3b82f6';
+            tabDashboard.style.color = '#f8fafc';
+            tabProducts.style.borderBottomColor = 'transparent';
+            tabProducts.style.color = 'var(--text-secondary)';
+            viewDashboard.style.display = 'block';
+            viewProducts.style.display = 'none';
+        });
+        
+        tabProducts.addEventListener('click', () => {
+            tabProducts.classList.add('active');
+            tabDashboard.classList.remove('active');
+            tabProducts.style.borderBottomColor = '#3b82f6';
+            tabProducts.style.color = '#f8fafc';
+            tabDashboard.style.borderBottomColor = 'transparent';
+            tabDashboard.style.color = 'var(--text-secondary)';
+            viewDashboard.style.display = 'none';
+            viewProducts.style.display = 'block';
+            renderProductView();
+        });
+    }
+    
+    // Dropdown change listener
+    const modelDropdown = document.getElementById('model-dropdown');
+    if (modelDropdown) {
+        modelDropdown.addEventListener('change', renderProductView);
+    }
 });
 
 function initCharts() {
@@ -160,9 +197,9 @@ function appendData(data, filename) {
     }
 
     data.forEach(row => {
-        let product = row[colProduct] || 'Unknown';
-        // Remove 'VFF' and any size/color in parentheses to group by model
-        product = product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
+        let rawProduct = row[colProduct] || 'Unknown';
+        rawProduct = rawProduct.replace(/VFF\s?/gi, '').trim();
+        let baseModel = rawProduct.replace(/\s*\(.*\)/, '').trim();
         
         // Parse numbers safely
         let qty = 1;
@@ -199,7 +236,8 @@ function appendData(data, filename) {
         globalSalesData.push({
             date: dateKey,
             rawDate: rawDate,
-            product: product,
+            product: rawProduct,
+            baseModel: baseModel,
             qty: qty,
             amt: amt,
             store: storeName
@@ -280,8 +318,8 @@ function renderDashboard() {
     
     globalSalesData.forEach(item => {
         // Migration for existing data in localStorage: normalize product name
-        if (item.product) {
-            item.product = item.product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
+        if (!item.baseModel && item.product) {
+            item.baseModel = item.product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
         }
         
         totalRevenue += item.amt;
@@ -293,10 +331,11 @@ function renderDashboard() {
         if (!salesByMonth[monthKey]) salesByMonth[monthKey] = 0;
         salesByMonth[monthKey] += item.amt;
         
-        // Aggregate Product
-        if (!salesByProduct[item.product]) salesByProduct[item.product] = { amt: 0, qty: 0 };
-        salesByProduct[item.product].amt += item.amt;
-        salesByProduct[item.product].qty += item.qty;
+        // Aggregate Product (by baseModel)
+        let model = item.baseModel || item.product;
+        if (!salesByProduct[model]) salesByProduct[model] = { amt: 0, qty: 0 };
+        salesByProduct[model].amt += item.amt;
+        salesByProduct[model].qty += item.qty;
         
         // Aggregate Store
         if (!salesByStore[item.store]) salesByStore[item.store] = 0;
@@ -383,6 +422,68 @@ function renderDashboard() {
             <td>${p}</td>
             <td>${salesByProduct[p].qty.toLocaleString()}</td>
             <td>฿${salesByProduct[p].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderProductView() {
+    const dropdown = document.getElementById('model-dropdown');
+    const tbody = document.getElementById('variant-table-body');
+    if (!dropdown || !tbody) return;
+    
+    // Collect unique models
+    const uniqueModels = new Set();
+    globalSalesData.forEach(item => {
+        if (item.baseModel) uniqueModels.add(item.baseModel);
+        else uniqueModels.add(item.product);
+    });
+    
+    const sortedModels = Array.from(uniqueModels).sort();
+    
+    // Preserve selection
+    const currentSelection = dropdown.value;
+    
+    // Populate dropdown
+    dropdown.innerHTML = '<option value="">Select a Base Model...</option>';
+    sortedModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model;
+        option.textContent = model;
+        dropdown.appendChild(option);
+    });
+    
+    if (sortedModels.includes(currentSelection)) {
+        dropdown.value = currentSelection;
+    }
+    
+    const selectedModel = dropdown.value;
+    if (!selectedModel) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">Select a model to view variants</td></tr>';
+        return;
+    }
+    
+    // Aggregate variants for the selected model
+    const variants = {};
+    globalSalesData.forEach(item => {
+        const model = item.baseModel || item.product;
+        if (model === selectedModel) {
+            const variantName = item.product || 'Unknown';
+            if (!variants[variantName]) variants[variantName] = { qty: 0, amt: 0 };
+            variants[variantName].qty += item.qty;
+            variants[variantName].amt += item.amt;
+        }
+    });
+    
+    const sortedVariants = Object.keys(variants).sort((a, b) => variants[b].amt - variants[a].amt);
+    
+    tbody.innerHTML = '';
+    sortedVariants.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${v}</td>
+            <td>${variants[v].qty.toLocaleString()}</td>
+            <td>฿${variants[v].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
         `;
         tbody.appendChild(tr);
     });

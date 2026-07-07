@@ -54,6 +54,13 @@
                 </div>
             </header>
 
+            <!-- Tabs -->
+            <div class="tabs-container" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.5rem;">
+                <button id="tab-dashboard" class="tab-btn active" style="background: none; border: none; color: #f8fafc; font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid #3b82f6; transition: all 0.3s ease;">Dashboard</button>
+                <button id="tab-products" class="tab-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; transition: all 0.3s ease;">Product Details</button>
+            </div>
+
+            <div id="dashboard-view">
             <!-- KPI Cards -->
             <div class="kpi-grid">
                 <div class="kpi-card">
@@ -139,6 +146,36 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            </div> <!-- End Dashboard View -->
+
+            <!-- Product Details View -->
+            <div id="product-view" style="display: none;">
+                <div class="table-card" style="margin-bottom: 2rem;">
+                    <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Product Variations Breakdown</h3>
+                        <select id="model-dropdown" style="background: var(--bg-primary); border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 8px; font-family: 'Inter', sans-serif; cursor: pointer;">
+                            <option value="">Select a Base Model...</option>
+                        </select>
+                    </div>
+                    <div class="table-container">
+                        <table id="product-variants-table">
+                            <thead>
+                                <tr>
+                                    <th>Variant (Size/Color)</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Total Sales (Net)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="variant-table-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-secondary);">Select a model to view variants</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
