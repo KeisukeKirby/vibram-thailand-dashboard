@@ -195,7 +195,7 @@ function processData(data) {
     // Update Trend Chart
     trendChartInstance.data.labels = sortedDates;
     trendChartInstance.data.datasets = [{
-        label: 'Revenue',
+        label: 'Sales',
         data: sortedDates.map(d => salesByDate[d]),
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
