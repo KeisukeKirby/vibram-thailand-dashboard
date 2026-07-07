@@ -155,7 +155,8 @@ function appendData(data, filename) {
 
     data.forEach(row => {
         let product = row[colProduct] || 'Unknown';
-        product = product.replace(/VFF\s?/gi, '').trim();
+        // Remove 'VFF' and any size/color in parentheses to group by model
+        product = product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
         
         // Parse numbers safely
         let qty = 1;
@@ -244,7 +245,7 @@ function renderDashboard() {
         document.getElementById('kpi-top-product').textContent = '-';
         document.getElementById('kpi-peak-date').textContent = '-';
         document.getElementById('data-period').textContent = 'Upload CSV data to begin analysis';
-        document.getElementById('table-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-secondary);">Upload data to view transactions</td></tr>';
+        document.getElementById('table-body').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">Upload data to view top products</td></tr>';
         
         trendChartInstance.data.labels = [];
         trendChartInstance.data.datasets = [];
@@ -272,6 +273,11 @@ function renderDashboard() {
     const salesByStore = {};
     
     globalSalesData.forEach(item => {
+        // Migration for existing data in localStorage: normalize product name
+        if (item.product) {
+            item.product = item.product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
+        }
+        
         totalRevenue += item.amt;
         totalQuantity += item.qty;
         
@@ -359,19 +365,18 @@ function renderDashboard() {
     }];
     storeChartInstance.update();
 
-    // Update Table (Last 10 transactions)
+    // Update Table (Top 10 Products)
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
     
-    const recent = globalSalesData.slice(-10).reverse();
-    recent.forEach(item => {
+    const top10 = sortedProducts.slice(0, 10);
+    top10.forEach((p, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.rawDate}</td>
-            <td>${item.store}</td>
-            <td>${item.product}</td>
-            <td>${item.qty}</td>
-            <td>฿${item.amt.toLocaleString()}</td>
+            <td>#${index + 1}</td>
+            <td>${p}</td>
+            <td>${salesByProduct[p].qty.toLocaleString()}</td>
+            <td>฿${salesByProduct[p].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
         `;
         tbody.appendChild(tr);
     });
