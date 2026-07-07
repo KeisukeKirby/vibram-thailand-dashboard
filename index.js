@@ -154,7 +154,8 @@ function appendData(data, filename) {
     }
 
     data.forEach(row => {
-        const product = row[colProduct] || 'Unknown';
+        let product = row[colProduct] || 'Unknown';
+        product = product.replace(/VFF\s?/gi, '').trim();
         
         // Parse numbers safely
         let qty = 1;
