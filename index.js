@@ -257,8 +257,8 @@ function appendData(data, filename) {
     let storeName = filename.replace(/\.[^/.]+$/, ""); // strip extension
     if (filename.toLowerCase().startsWith('sale vff cart lp')) {
         storeName = 'Central LP Cart';
-    } else if (filename.toLowerCase().startsWith('sale vff cen lp')) {
-        storeName = 'Central LP';
+    } else if (filename.toLowerCase().startsWith('sale vff cen lp') || filename.toLowerCase().startsWith('sales vff cen lp')) {
+        storeName = 'Central LP 3F';
     } else if (filename.toLowerCase().startsWith('sale vff consignment')) {
         storeName = 'Consignment';
         // Force Amount column to be Column L (index 11) for Consignment files
@@ -435,8 +435,8 @@ function renderDashboard() {
             let lowerStore = item.store.toLowerCase();
             if (lowerStore.startsWith('sale vff cart lp')) {
                 item.store = 'Central LP Cart';
-            } else if (lowerStore.startsWith('sale vff cen lp')) {
-                item.store = 'Central LP';
+            } else if (lowerStore.startsWith('sale vff cen lp') || lowerStore.startsWith('sales vff cen lp')) {
+                item.store = 'Central LP 3F';
             } else if (lowerStore.startsWith('sale vff consignment')) {
                 item.store = 'Consignment';
             } else if (lowerStore.startsWith('sale vff kvillage') || lowerStore.startsWith('sales vff kvillage')) {
