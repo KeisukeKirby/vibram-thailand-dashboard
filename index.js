@@ -149,6 +149,8 @@ function appendData(data, filename) {
     let storeName = filename.replace(/\.[^/.]+$/, ""); // strip extension
     if (filename.toLowerCase().startsWith('sale vff cart lp')) {
         storeName = 'Central LP Cart';
+    } else if (filename.toLowerCase().startsWith('sale vff cen lp')) {
+        storeName = 'Central LP';
     }
 
     data.forEach(row => {
