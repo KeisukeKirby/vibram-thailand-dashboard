@@ -144,6 +144,64 @@ function handleFileUpload(event) {
     });
 }
 
+// Normalize various date formats to YYYY-MM-DD
+function normalizeDate(rawDate) {
+    if (!rawDate || rawDate === 'Unknown Date') return 'Unknown';
+    let str = rawDate.split(' ')[0].trim();
+    
+    const months = {
+        'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04', 'may': '05', 'jun': '06',
+        'jul': '07', 'aug': '08', 'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+    };
+
+    // 1. DD-MMM-YYYY or DD-MMM-YY
+    let m = str.match(/^(\d{1,2})-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(\d{2,4})$/i);
+    if (m) {
+        let y = m[3];
+        if (y.length === 2) y = '20' + y;
+        return `${y}-${months[m[2].toLowerCase()]}-${m[1].padStart(2, '0')}`;
+    }
+
+    // 2. MMM-YYYY or MMM-YY (e.g., Apr-2026) -> Assume 1st of month
+    m = str.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(\d{2,4})$/i);
+    if (m) {
+        let y = m[2];
+        if (y.length === 2) y = '20' + y;
+        return `${y}-${months[m[1].toLowerCase()]}-01`;
+    }
+
+    // 3. DD/MM/YYYY or DD-MM-YYYY
+    m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) {
+        let p1 = parseInt(m[1]), p2 = parseInt(m[2]), y = m[3];
+        if (y.length === 2) y = '20' + y;
+        // Default DD/MM/YYYY unless MM > 12
+        let d = p2 > 12 ? String(p2).padStart(2, '0') : String(p1).padStart(2, '0');
+        let mon = p2 > 12 ? String(p1).padStart(2, '0') : String(p2).padStart(2, '0');
+        return `${y}-${mon}-${d}`;
+    }
+
+    // 4. YYYY/MM/DD or YYYY-MM-DD
+    m = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (m) {
+        return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    }
+
+    // 5. YYYY/MM or YYYY-MM
+    m = str.match(/^(\d{4})[\/\-](\d{1,2})$/);
+    if (m) {
+        return `${m[1]}-${m[2].padStart(2, '0')}-01`;
+    }
+
+    // Fallback: try JS Date
+    let dObj = new Date(str);
+    if (!isNaN(dObj.getTime())) {
+        return dObj.toISOString().split('T')[0];
+    }
+    
+    return str;
+}
+
 // Find matching column name based on keywords
 function findColumn(headers, keywords) {
     // First, try exact matches to avoid partial match conflicts
@@ -232,19 +290,7 @@ function appendData(data, filename) {
         
         // Parse date
         let rawDate = (colDate && row[colDate]) ? row[colDate] : 'Unknown Date';
-        // Extract the date part and handle DD/MM/YYYY format
-        let dateKey = rawDate.split(' ')[0]; 
-        
-        if (dateKey.includes('/')) {
-            const parts = dateKey.split('/');
-            if (parts.length === 3) {
-                let day = parts[0].padStart(2, '0');
-                let month = parts[1].padStart(2, '0');
-                let year = parts[2];
-                if (year.length === 2) year = '20' + year;
-                dateKey = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD for correct sorting
-            }
-        }
+        let dateKey = normalizeDate(rawDate);
         
         globalSalesData.push({
             date: dateKey,
@@ -351,6 +397,11 @@ function renderDashboard() {
             } else if (lowerStore.startsWith('sale vff central eastville') || lowerStore.startsWith('sales vff central eastville')) {
                 item.store = 'Central EV';
             }
+        }
+        
+        // Migration for existing data in localStorage: normalize date
+        if (item.date && !item.date.match(/^\d{4}-\d{2}-\d{2}$/) && item.date !== 'Unknown') {
+            item.date = normalizeDate(item.date);
         }
         
         totalRevenue += item.amt;
