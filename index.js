@@ -265,6 +265,12 @@ function appendData(data, filename) {
         if (headers.length >= 11) {
             colAmount = headers[10];
         }
+    } else if (filename.toLowerCase().startsWith('sale vff central world') || filename.toLowerCase().startsWith('sales vff central world')) {
+        storeName = 'Central W';
+        // Force Amount column to be Column K (index 10) for Central WORLD files
+        if (headers.length >= 11) {
+            colAmount = headers[10];
+        }
     }
 
     data.forEach(row => {
@@ -396,6 +402,8 @@ function renderDashboard() {
                 item.store = 'Central CL';
             } else if (lowerStore.startsWith('sale vff central eastville') || lowerStore.startsWith('sales vff central eastville')) {
                 item.store = 'Central EV';
+            } else if (lowerStore.startsWith('sale vff central world') || lowerStore.startsWith('sales vff central world')) {
+                item.store = 'Central W';
             }
         }
         
