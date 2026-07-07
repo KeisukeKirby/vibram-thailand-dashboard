@@ -335,6 +335,24 @@ function renderDashboard() {
             item.baseModel = item.product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
         }
         
+        // Migration for existing data in localStorage: normalize store name
+        if (item.store) {
+            let lowerStore = item.store.toLowerCase();
+            if (lowerStore.startsWith('sale vff cart lp')) {
+                item.store = 'Central LP Cart';
+            } else if (lowerStore.startsWith('sale vff cen lp')) {
+                item.store = 'Central LP';
+            } else if (lowerStore.startsWith('sale vff consignment')) {
+                item.store = 'Consignment';
+            } else if (lowerStore.startsWith('sale vff kvillage') || lowerStore.startsWith('sales vff kvillage')) {
+                item.store = 'K Village';
+            } else if (lowerStore.startsWith('sale vff central chidlom') || lowerStore.startsWith('sales vff central chidlom')) {
+                item.store = 'Central CL';
+            } else if (lowerStore.startsWith('sale vff central eastville') || lowerStore.startsWith('sales vff central eastville')) {
+                item.store = 'Central EV';
+            }
+        }
+        
         totalRevenue += item.amt;
         totalQuantity += item.qty;
         
