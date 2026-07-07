@@ -182,7 +182,6 @@ function appendData(data, filename) {
     let colAmount = findColumn(headers, amountKws);
     let colDate = findColumn(headers, dateKws);
     
-    // Determine store name from filename
     let storeName = filename.replace(/\.[^/.]+$/, ""); // strip extension
     if (filename.toLowerCase().startsWith('sale vff cart lp')) {
         storeName = 'Central LP Cart';
@@ -194,6 +193,8 @@ function appendData(data, filename) {
         if (headers.length >= 12) {
             colAmount = headers[11];
         }
+    } else if (filename.toLowerCase().startsWith('sale vff kvillage')) {
+        storeName = 'K Village';
     }
 
     data.forEach(row => {
