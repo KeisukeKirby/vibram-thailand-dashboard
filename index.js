@@ -266,7 +266,7 @@ function renderDashboard() {
     let totalQuantity = 0;
     
     // Aggregation maps
-    const salesByDate = {};
+    const salesByMonth = {};
     const salesByProduct = {};
     const salesByStore = {};
     
@@ -274,9 +274,11 @@ function renderDashboard() {
         totalRevenue += item.amt;
         totalQuantity += item.qty;
         
-        // Aggregate Date
-        if (!salesByDate[item.date]) salesByDate[item.date] = 0;
-        salesByDate[item.date] += item.amt;
+        // Aggregate Month
+        // item.date is in YYYY-MM-DD format. We extract YYYY-MM.
+        const monthKey = item.date ? item.date.substring(0, 7) : 'Unknown';
+        if (!salesByMonth[monthKey]) salesByMonth[monthKey] = 0;
+        salesByMonth[monthKey] += item.amt;
         
         // Aggregate Product
         if (!salesByProduct[item.product]) salesByProduct[item.product] = { amt: 0, qty: 0 };
@@ -288,14 +290,14 @@ function renderDashboard() {
         salesByStore[item.store] += item.amt;
     });
 
-    // Sort dates
-    const sortedDates = Object.keys(salesByDate).sort();
-    let peakDate = '-';
-    let maxDateVal = -1;
-    sortedDates.forEach(d => {
-        if (salesByDate[d] > maxDateVal) {
-            maxDateVal = salesByDate[d];
-            peakDate = d;
+    // Sort months
+    const sortedMonths = Object.keys(salesByMonth).sort();
+    let peakMonth = '-';
+    let maxMonthVal = -1;
+    sortedMonths.forEach(m => {
+        if (salesByMonth[m] > maxMonthVal) {
+            maxMonthVal = salesByMonth[m];
+            peakMonth = m;
         }
     });
 
@@ -308,13 +310,13 @@ function renderDashboard() {
     document.getElementById('kpi-revenue').textContent = '฿' + totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     document.getElementById('kpi-quantity').textContent = totalQuantity.toLocaleString();
     document.getElementById('kpi-top-product').textContent = topProduct;
-    document.getElementById('kpi-peak-date').textContent = peakDate;
+    document.getElementById('kpi-peak-date').textContent = peakMonth;
 
-    // Update Trend Chart
-    trendChartInstance.data.labels = sortedDates;
+    // Update Trend Chart (Monthly)
+    trendChartInstance.data.labels = sortedMonths;
     trendChartInstance.data.datasets = [{
         label: 'Sales',
-        data: sortedDates.map(d => salesByDate[d]),
+        data: sortedMonths.map(m => salesByMonth[m]),
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         borderWidth: 2,
