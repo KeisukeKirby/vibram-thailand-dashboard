@@ -292,6 +292,10 @@ function appendData(data, filename) {
     let isOnlineFile = false;
     if (filename.toLowerCase().startsWith('sale vff online') || filename.toLowerCase().startsWith('sales vff online')) {
         isOnlineFile = true;
+        // Force Amount column to be Column H (index 7) for Online files
+        if (headers.length >= 8) {
+            colAmount = headers[7];
+        }
     }
 
     data.forEach(row => {
