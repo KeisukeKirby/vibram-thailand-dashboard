@@ -58,6 +58,7 @@
             <div class="tabs-container" style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.5rem;">
                 <button id="tab-dashboard" class="tab-btn active" style="background: none; border: none; color: #f8fafc; font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid #3b82f6; transition: all 0.3s ease;">Dashboard</button>
                 <button id="tab-products" class="tab-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; transition: all 0.3s ease;">Product Details</button>
+                <button id="tab-data" class="tab-btn" style="background: none; border: none; color: var(--text-secondary); font-size: 1.1rem; font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; transition: all 0.3s ease;">Data Management</button>
             </div>
 
             <div id="dashboard-view">
@@ -172,6 +173,28 @@
                             <tbody id="variant-table-body">
                                 <tr>
                                     <td colspan="3" style="text-align: center; color: var(--text-secondary);">Select a model to view variants</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="data-view" style="display: none;">
+                <div class="chart-card">
+                    <h3>Upload History</h3>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); text-align: left;">
+                                    <th style="padding: 1rem; color: var(--text-secondary); font-weight: 500;">Source File</th>
+                                    <th style="padding: 1rem; color: var(--text-secondary); font-weight: 500;">Records</th>
+                                    <th style="padding: 1rem; color: var(--text-secondary); font-weight: 500; text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-history-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 1rem;">No data uploaded yet.</td>
                                 </tr>
                             </tbody>
                         </table>

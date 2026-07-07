@@ -26,31 +26,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab switching event listeners
     const tabDashboard = document.getElementById('tab-dashboard');
     const tabProducts = document.getElementById('tab-products');
+    const tabData = document.getElementById('tab-data');
+    
     const viewDashboard = document.getElementById('dashboard-view');
     const viewProducts = document.getElementById('product-view');
+    const viewData = document.getElementById('data-view');
     
-    if (tabDashboard && tabProducts) {
+    function switchTab(activeTab, activeView) {
+        [tabDashboard, tabProducts, tabData].forEach(t => {
+            if (t) {
+                t.classList.remove('active');
+                t.style.borderBottomColor = 'transparent';
+                t.style.color = 'var(--text-secondary)';
+            }
+        });
+        [viewDashboard, viewProducts, viewData].forEach(v => {
+            if (v) v.style.display = 'none';
+        });
+        
+        if (activeTab) {
+            activeTab.classList.add('active');
+            activeTab.style.borderBottomColor = '#3b82f6';
+            activeTab.style.color = '#f8fafc';
+        }
+        if (activeView) activeView.style.display = 'block';
+    }
+
+    if (tabDashboard && tabProducts && tabData) {
         tabDashboard.addEventListener('click', () => {
-            tabDashboard.classList.add('active');
-            tabProducts.classList.remove('active');
-            tabDashboard.style.borderBottomColor = '#3b82f6';
-            tabDashboard.style.color = '#f8fafc';
-            tabProducts.style.borderBottomColor = 'transparent';
-            tabProducts.style.color = 'var(--text-secondary)';
-            viewDashboard.style.display = 'block';
-            viewProducts.style.display = 'none';
+            switchTab(tabDashboard, viewDashboard);
         });
         
         tabProducts.addEventListener('click', () => {
-            tabProducts.classList.add('active');
-            tabDashboard.classList.remove('active');
-            tabProducts.style.borderBottomColor = '#3b82f6';
-            tabProducts.style.color = '#f8fafc';
-            tabDashboard.style.borderBottomColor = 'transparent';
-            tabDashboard.style.color = 'var(--text-secondary)';
-            viewDashboard.style.display = 'none';
-            viewProducts.style.display = 'block';
+            switchTab(tabProducts, viewProducts);
             renderProductView();
+        });
+        
+        tabData.addEventListener('click', () => {
+            switchTab(tabData, viewData);
+            renderDataManagementView();
         });
     }
     
@@ -328,7 +342,8 @@ function appendData(data, filename) {
             baseModel: baseModel,
             qty: qty,
             amt: amt,
-            store: rowStoreName
+            store: rowStoreName,
+            sourceFile: filename
         });
     });
 
@@ -408,6 +423,11 @@ function renderDashboard() {
         // Migration for existing data in localStorage: normalize product name
         if (!item.baseModel && item.product) {
             item.baseModel = item.product.replace(/VFF\s?/gi, '').replace(/\s*\(.*\)/, '').trim();
+        }
+        
+        // Migration: add sourceFile if missing
+        if (!item.sourceFile) {
+            item.sourceFile = 'Unknown Source (Legacy)';
         }
         
         // Migration for existing data in localStorage: normalize store name
@@ -603,6 +623,71 @@ function renderProductView() {
             <td>${v}</td>
             <td>${variants[v].qty.toLocaleString()}</td>
             <td>฿${variants[v].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Data Management functions
+window.deleteFile = function(filename) {
+    if (!confirm(`Are you sure you want to delete all data from '${filename}'?`)) {
+        return;
+    }
+    
+    // Filter out items that came from this file
+    const initialLength = globalSalesData.length;
+    globalSalesData = globalSalesData.filter(item => item.sourceFile !== filename);
+    const deletedCount = initialLength - globalSalesData.length;
+    
+    saveDataToStorage();
+    renderDashboard();
+    renderDataManagementView();
+    
+    // We need to re-render Product View if it's currently open
+    const pv = document.getElementById('product-view');
+    if (pv && pv.style.display === 'block') {
+        renderProductView();
+    }
+    
+    alert(`Deleted ${deletedCount} records from '${filename}'.`);
+};
+
+window.renderDataManagementView = function() {
+    const tbody = document.getElementById('data-history-body');
+    if (!tbody) return;
+    
+    if (globalSalesData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 1rem;">No data uploaded yet.</td></tr>`;
+        return;
+    }
+    
+    // Group by sourceFile
+    const fileStats = {};
+    globalSalesData.forEach(item => {
+        const f = item.sourceFile || 'Unknown Source (Legacy)';
+        if (!fileStats[f]) {
+            fileStats[f] = 0;
+        }
+        fileStats[f]++;
+    });
+    
+    tbody.innerHTML = '';
+    
+    // Sort files alphabetically
+    const sortedFiles = Object.keys(fileStats).sort();
+    
+    sortedFiles.forEach(filename => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+        
+        tr.innerHTML = `
+            <td style="padding: 1rem; color: #f8fafc;">${filename}</td>
+            <td style="padding: 1rem; color: var(--text-secondary);">${fileStats[filename].toLocaleString()} rows</td>
+            <td style="padding: 1rem; text-align: right;">
+                <button onclick="deleteFile('${filename}')" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                    <i class="fas fa-trash-alt"></i> Delete
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
