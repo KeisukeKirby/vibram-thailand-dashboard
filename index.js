@@ -201,6 +201,12 @@ function appendData(data, filename) {
         if (headers.length >= 11) {
             colAmount = headers[10];
         }
+    } else if (filename.toLowerCase().startsWith('sale vff central eastville') || filename.toLowerCase().startsWith('sales vff central eastville')) {
+        storeName = 'Central EV';
+        // Force Amount column to be Column K (index 10) for Central EASTVILLE files
+        if (headers.length >= 11) {
+            colAmount = headers[10];
+        }
     }
 
     data.forEach(row => {
