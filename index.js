@@ -140,10 +140,10 @@ function appendData(data, filename) {
     const amountKws = ['net', 'amount', 'price', 'revenue', '金額', '売上', '合計'];
     const dateKws = ['date', 'time', '日時', '販売日', '日付', 'sale date'];
 
-    const colProduct = findColumn(headers, productKws) || headers[0];
-    const colQuantity = findColumn(headers, quantityKws);
-    const colAmount = findColumn(headers, amountKws);
-    const colDate = findColumn(headers, dateKws);
+    let colProduct = findColumn(headers, productKws) || headers[0];
+    let colQuantity = findColumn(headers, quantityKws);
+    let colAmount = findColumn(headers, amountKws);
+    let colDate = findColumn(headers, dateKws);
     
     // Determine store name from filename
     let storeName = filename.replace(/\.[^/.]+$/, ""); // strip extension
@@ -151,6 +151,12 @@ function appendData(data, filename) {
         storeName = 'Central LP Cart';
     } else if (filename.toLowerCase().startsWith('sale vff cen lp')) {
         storeName = 'Central LP';
+    } else if (filename.toLowerCase().startsWith('sale vff consignment')) {
+        storeName = 'Consignment';
+        // Force Amount column to be Column L (index 11) for Consignment files
+        if (headers.length >= 12) {
+            colAmount = headers[11];
+        }
     }
 
     data.forEach(row => {
