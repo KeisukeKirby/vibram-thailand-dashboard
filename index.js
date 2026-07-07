@@ -96,9 +96,9 @@ function processData(data) {
 
     // Keywords for auto-detecting columns
     const productKws = ['product', 'item', '商品', '品名', 'モデル'];
-    const quantityKws = ['qty', 'quantity', '数量', '個数'];
-    const amountKws = ['amount', 'price', 'sales', 'revenue', '金額', '売上', '合計'];
-    const dateKws = ['date', 'time', '日時', '販売日', '日付'];
+    const quantityKws = ['qty', 'quantity', '数量', '個数', 'sales quantity'];
+    const amountKws = ['amount', 'price', 'sales', 'revenue', '金額', '売上', '合計', 'net'];
+    const dateKws = ['date', 'time', '日時', '販売日', '日付', 'sale date'];
 
     const colProduct = findColumn(headers, productKws) || headers[0];
     const colQuantity = findColumn(headers, quantityKws);
@@ -136,8 +136,19 @@ function processData(data) {
         
         // Parse date
         let rawDate = (colDate && row[colDate]) ? row[colDate] : 'Unknown Date';
-        // Simple extraction of YYYY-MM-DD or YYYY/MM/DD
+        // Extract the date part and handle DD/MM/YYYY format
         let dateKey = rawDate.split(' ')[0]; 
+        
+        if (dateKey.includes('/')) {
+            const parts = dateKey.split('/');
+            if (parts.length === 3) {
+                let day = parts[0].padStart(2, '0');
+                let month = parts[1].padStart(2, '0');
+                let year = parts[2];
+                if (year.length === 2) year = '20' + year;
+                dateKey = `${year}-${month}-${day}`; // Convert to YYYY-MM-DD for correct sorting
+            }
+        }
 
         totalRevenue += amt;
         totalQuantity += qty;
