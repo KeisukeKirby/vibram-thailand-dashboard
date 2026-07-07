@@ -79,6 +79,16 @@ function handleFileUpload(event) {
 
 // Find matching column name based on keywords
 function findColumn(headers, keywords) {
+    // First, try exact matches to avoid partial match conflicts
+    for (let header of headers) {
+        let h = header.toLowerCase().trim();
+        for (let kw of keywords) {
+            if (h === kw) {
+                return header;
+            }
+        }
+    }
+    // Then, try partial matches
     for (let header of headers) {
         let h = header.toLowerCase().trim();
         for (let kw of keywords) {
@@ -97,7 +107,7 @@ function processData(data) {
     // Keywords for auto-detecting columns
     const productKws = ['product', 'item', '商品', '品名', 'モデル'];
     const quantityKws = ['qty', 'quantity', '数量', '個数', 'sales quantity'];
-    const amountKws = ['amount', 'price', 'sales', 'revenue', '金額', '売上', '合計', 'net'];
+    const amountKws = ['net', 'amount', 'price', 'revenue', '金額', '売上', '合計'];
     const dateKws = ['date', 'time', '日時', '販売日', '日付', 'sale date'];
 
     const colProduct = findColumn(headers, productKws) || headers[0];
