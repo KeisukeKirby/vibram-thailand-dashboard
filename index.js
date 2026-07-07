@@ -271,6 +271,8 @@ function appendData(data, filename) {
         if (headers.length >= 11) {
             colAmount = headers[10];
         }
+    } else if (filename.toLowerCase().startsWith('sale vff paradise park') || filename.toLowerCase().startsWith('sales vff paradise park')) {
+        storeName = 'Paradise Park';
     }
     
     let isOnlineFile = false;
@@ -425,6 +427,8 @@ function renderDashboard() {
                 item.store = 'Central EV';
             } else if (lowerStore.startsWith('sale vff central world') || lowerStore.startsWith('sales vff central world')) {
                 item.store = 'Central W';
+            } else if (lowerStore.startsWith('sale vff paradise park') || lowerStore.startsWith('sales vff paradise park')) {
+                item.store = 'Paradise Park';
             } else if (lowerStore.startsWith('sale vff online') || lowerStore.startsWith('sales vff online')) {
                 // We cannot determine exact channel (Lazada/Shopee/LINE+) from legacy store string without raw row data.
                 // It will be treated as LINE+ as a fallback for old cached data until they re-upload.
