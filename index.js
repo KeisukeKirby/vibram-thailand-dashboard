@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearBtn.addEventListener('click', clearData);
     }
     
-    // Load existing data from localStorage
-    loadDataFromStorage();
+    // Load existing data from Supabase
+    fetchDataFromSupabase();
     
     // Tab switching event listeners
     const tabDashboard = document.getElementById('tab-dashboard');
@@ -142,10 +142,10 @@ function handleFileUpload(event) {
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        complete: function(results) {
+        complete: async function(results) {
             if (results.data && results.data.length > 0) {
-                appendData(results.data, file.name);
-                document.getElementById('upload-status').textContent = `Last loaded: ${file.name}`;
+                await appendData(results.data, file.name);
+                document.getElementById('upload-status').textContent = `Loaded and saved: ${file.name}`;
                 event.target.value = ''; // Reset file input
             } else {
                 alert("The CSV file is empty or invalid.");
@@ -239,7 +239,7 @@ function findColumn(headers, keywords) {
     return null;
 }
 
-function appendData(data, filename) {
+async function appendData(data, filename) {
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
 
@@ -365,40 +365,36 @@ function appendData(data, filename) {
         });
     });
 
-    saveDataToStorage();
+    try {
+        await window.supabaseAPI.insertSalesData(globalSalesData.filter(i => i.sourceFile === filename));
+    } catch (e) {
+        alert("Failed to save data to cloud database. It may only be visible locally.");
+    }
     renderDashboard();
 }
 
-function saveDataToStorage() {
+async function fetchDataFromSupabase() {
+    document.getElementById('upload-status').textContent = `Loading data from cloud...`;
     try {
-        localStorage.setItem('vibram_dashboard_data', JSON.stringify(globalSalesData));
-    } catch (e) {
-        console.error("Local storage quota exceeded or error", e);
-        alert("Warning: Could not save data locally. The file might be too large.");
+        globalSalesData = await window.supabaseAPI.getSalesData();
+        document.getElementById('upload-status').textContent = `Loaded from cloud database`;
+    } catch(e) {
+        document.getElementById('upload-status').textContent = `Failed to load cloud data`;
     }
+    renderDashboard();
 }
 
-function loadDataFromStorage() {
-    const saved = localStorage.getItem('vibram_dashboard_data');
-    if (saved) {
+async function clearData() {
+    if (confirm("Are you sure you want to clear all accumulated dashboard data from the database?")) {
         try {
-            globalSalesData = JSON.parse(saved);
-            document.getElementById('upload-status').textContent = `Loaded from saved data`;
+            await window.supabaseAPI.deleteAllData();
+            globalSalesData = [];
+            document.getElementById('upload-status').textContent = `No data loaded`;
             renderDashboard();
+            renderDataManagementView();
         } catch(e) {
-            console.error("Failed to parse saved data", e);
+            alert("Failed to clear data from database.");
         }
-    } else {
-        renderDashboard(); // Render empty state
-    }
-}
-
-function clearData() {
-    if (confirm("Are you sure you want to clear all accumulated dashboard data?")) {
-        globalSalesData = [];
-        localStorage.removeItem('vibram_dashboard_data');
-        document.getElementById('upload-status').textContent = `No data loaded`;
-        renderDashboard();
     }
 }
 
@@ -653,27 +649,32 @@ function renderProductView() {
 }
 
 // Data Management functions
-window.deleteFile = function(filename) {
+window.deleteFile = async function(filename) {
     if (!confirm(`Are you sure you want to delete all data from '${filename}'?`)) {
         return;
     }
     
-    // Filter out items that came from this file
-    const initialLength = globalSalesData.length;
-    globalSalesData = globalSalesData.filter(item => item.sourceFile !== filename);
-    const deletedCount = initialLength - globalSalesData.length;
-    
-    saveDataToStorage();
-    renderDashboard();
-    renderDataManagementView();
-    
-    // We need to re-render Product View if it's currently open
-    const pv = document.getElementById('product-view');
-    if (pv && pv.style.display === 'block') {
-        renderProductView();
+    try {
+        await window.supabaseAPI.deleteBySourceFile(filename);
+        
+        // Filter out items that came from this file locally
+        const initialLength = globalSalesData.length;
+        globalSalesData = globalSalesData.filter(item => item.sourceFile !== filename);
+        const deletedCount = initialLength - globalSalesData.length;
+        
+        renderDashboard();
+        renderDataManagementView();
+        
+        // We need to re-render Product View if it's currently open
+        const pv = document.getElementById('product-view');
+        if (pv && pv.style.display === 'block') {
+            renderProductView();
+        }
+        
+        alert(`Deleted ${deletedCount} records from '${filename}'.`);
+    } catch(e) {
+        alert("Failed to delete data from cloud database.");
     }
-    
-    alert(`Deleted ${deletedCount} records from '${filename}'.`);
 };
 
 window.renderDataManagementView = function() {
