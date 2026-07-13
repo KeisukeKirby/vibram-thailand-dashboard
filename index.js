@@ -677,6 +677,9 @@ function renderProductView() {
     
     // Aggregate variants for the selected model
     const variants = {};
+    const sizeSales = {};
+    const colorSales = {};
+    
     globalSalesData.forEach(item => {
         const model = item.baseModel || item.product;
         if (model === selectedModel) {
@@ -684,6 +687,34 @@ function renderProductView() {
             if (!variants[variantName]) variants[variantName] = { qty: 0, amt: 0 };
             variants[variantName].qty += item.qty;
             variants[variantName].amt += item.amt;
+            
+            // Extract size and color
+            let size = 'Unknown';
+            let color = 'Unknown';
+            
+            const match = variantName.match(/\(([^,]+)(?:,\s*(.+))?\)/);
+            if (match) {
+                if (match[2]) {
+                    // (Size, Color)
+                    size = match[1].trim();
+                    color = match[2].trim();
+                } else {
+                    // (Size only or Color only, we assume Size for now, but sometimes it could be Color)
+                    // We'll just put it in Size as a fallback if there's no comma
+                    size = match[1].trim();
+                }
+            } else {
+                // If it doesn't match the parens format, maybe it's just the base model name
+                // Ignore or put in Unknown
+            }
+            
+            if (!sizeSales[size]) sizeSales[size] = { qty: 0, amt: 0 };
+            sizeSales[size].qty += item.qty;
+            sizeSales[size].amt += item.amt;
+            
+            if (!colorSales[color]) colorSales[color] = { qty: 0, amt: 0 };
+            colorSales[color].qty += item.qty;
+            colorSales[color].amt += item.amt;
         }
     });
     
@@ -699,6 +730,46 @@ function renderProductView() {
         `;
         tbody.appendChild(tr);
     });
+    
+    // Update Size Table
+    const sizeTbody = document.getElementById('size-table-body');
+    if (sizeTbody) {
+        sizeTbody.innerHTML = '';
+        const sortedSizes = Object.keys(sizeSales).sort((a, b) => sizeSales[b].amt - sizeSales[a].amt);
+        if (sortedSizes.length === 0) {
+            sizeTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">No data</td></tr>';
+        } else {
+            sortedSizes.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s}</td>
+                    <td>${sizeSales[s].qty.toLocaleString()}</td>
+                    <td>฿${sizeSales[s].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                `;
+                sizeTbody.appendChild(tr);
+            });
+        }
+    }
+    
+    // Update Color Table
+    const colorTbody = document.getElementById('color-table-body');
+    if (colorTbody) {
+        colorTbody.innerHTML = '';
+        const sortedColors = Object.keys(colorSales).sort((a, b) => colorSales[b].amt - colorSales[a].amt);
+        if (sortedColors.length === 0) {
+            colorTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary);">No data</td></tr>';
+        } else {
+            sortedColors.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${c}</td>
+                    <td>${colorSales[c].qty.toLocaleString()}</td>
+                    <td>฿${colorSales[c].amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</td>
+                `;
+                colorTbody.appendChild(tr);
+            });
+        }
+    }
 }
 
 // Data Management functions
