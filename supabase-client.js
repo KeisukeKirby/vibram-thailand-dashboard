@@ -1,13 +1,13 @@
 const SUPABASE_URL = 'https://bnftepixymtqbzsqrfjt.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJuZnRlcGl4eW10cWJ6c3FyZmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NjU3NjksImV4cCI6MjA5OTA0MTc2OX0.55EF3dHZ9Ev0ZlpqB36A4V4sJGg4YlpreWMxHojJQNM';
 
-// Initialize Supabase Client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase Client (avoid naming collision with window.supabase)
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Data Access Object
 window.supabaseAPI = {
     async getSalesData() {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('sales_data')
             .select('*');
             
@@ -47,7 +47,7 @@ window.supabaseAPI = {
         const CHUNK_SIZE = 500;
         for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
             const chunk = rows.slice(i, i + CHUNK_SIZE);
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('sales_data')
                 .insert(chunk);
 
@@ -59,7 +59,7 @@ window.supabaseAPI = {
     },
 
     async deleteBySourceFile(sourceFile) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('sales_data')
             .delete()
             .eq('source_file', sourceFile);
@@ -71,7 +71,7 @@ window.supabaseAPI = {
     },
 
     async deleteAllData() {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('sales_data')
             .delete()
             .neq('id', '00000000-0000-0000-0000-000000000000'); // Dummy condition to delete all rows
