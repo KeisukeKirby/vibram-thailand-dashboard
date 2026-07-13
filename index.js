@@ -336,9 +336,9 @@ async function appendData(data, filename) {
         storeName = 'K Village';
     } else if (filename.toLowerCase().startsWith('sale vff central chidlom') || filename.toLowerCase().startsWith('sales vff central chidlom')) {
         storeName = 'Central CL';
-        // Force Amount column to be Column K (index 10) for Central CHIDLOM files
-        if (headers.length >= 11) {
-            colAmount = headers[10];
+        // Force Amount column to be Column L (index 11) for Central CHIDLOM files
+        if (headers.length >= 12) {
+            colAmount = headers[11];
         }
     } else if (filename.toLowerCase().startsWith('sale vff central eastville') || filename.toLowerCase().startsWith('sales vff central eastville')) {
         storeName = 'Central EV';
@@ -366,23 +366,36 @@ async function appendData(data, filename) {
     }
 
     data.forEach(row => {
+        let rawDateStr = colDate ? row[colDate] : '';
+        let rawProductStr = colProduct ? row[colProduct] : '';
+        
+        // Skip empty rows or the 2nd header row (which has no date and no product)
+        if (!rawDateStr && !rawProductStr) {
+            return;
+        }
+
         let rowStoreName = storeName;
         if (isOnlineFile) {
-            let channel = (headers.length >= 2) ? row[headers[1]] : '';
-            if (channel) {
-                let lowerChannel = String(channel).toLowerCase().trim();
-                if (lowerChannel === 'lazada') {
-                    rowStoreName = 'Lazada';
-                } else if (lowerChannel === 'shopee vff') {
-                    rowStoreName = 'Shopee';
+            let ch = row['Channel'] || row['channel'] || row['店舗'] || '';
+            ch = ch.toLowerCase();
+            if (ch.includes('lazada')) {
+                rowStoreName = 'Lazada';
+            } else if (ch.includes('shopee')) {
+                rowStoreName = 'Shopee';
+            } else if (ch.includes('line')) {
+                rowStoreName = 'LINE+';
+            } else {
+                if (row['Order Number']) {
+                    let onum = row['Order Number'].toLowerCase();
+                    if (onum.includes('lazada')) rowStoreName = 'Lazada';
+                    else if (onum.includes('shopee')) rowStoreName = 'Shopee';
+                    else rowStoreName = 'LINE+';
                 } else {
                     rowStoreName = 'LINE+';
                 }
-            } else {
-                rowStoreName = 'LINE+';
             }
         }
-        let rawProduct = row[colProduct] || 'Unknown';
+        let rawProduct = rawProductStr || 'Unknown';
         rawProduct = rawProduct.replace(/VFF\s?/gi, '').trim();
         let baseModel = rawProduct.replace(/\s*\(.*\)/, '').trim();
         
@@ -403,8 +416,13 @@ async function appendData(data, filename) {
         }
         
         // Parse date
-        let rawDate = (colDate && row[colDate]) ? row[colDate] : 'Unknown Date';
+        let rawDate = rawDateStr || 'Unknown Date';
         let dateKey = normalizeDate(rawDate);
+        
+        // If it's a completely invalid date row like a totals row, we can optionally skip
+        if (dateKey === 'Unknown' && rawProduct === 'Unknown' && amt === 0) {
+            return;
+        }
         
         globalSalesData.push({
             date: dateKey,
