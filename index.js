@@ -414,7 +414,8 @@ async function appendData(data, filename) {
             qty: qty,
             amt: amt,
             store: rowStoreName,
-            sourceFile: filename
+            sourceFile: filename,
+            createdAt: new Date().toISOString()
         });
     });
 
