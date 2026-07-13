@@ -2,6 +2,8 @@
 let trendChartInstance = null;
 let productChartInstance = null;
 let storeChartInstance = null;
+let shopTrendChartInstance = null;
+let shopProductChartInstance = null;
 
 // Global data store
 let globalSalesData = [];
@@ -27,20 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabDashboard = document.getElementById('tab-dashboard');
     const tabProducts = document.getElementById('tab-products');
     const tabData = document.getElementById('tab-data');
+    const tabShop = document.getElementById('tab-shop');
     
     const viewDashboard = document.getElementById('dashboard-view');
     const viewProducts = document.getElementById('product-view');
     const viewData = document.getElementById('data-view');
+    const viewShop = document.getElementById('shop-view');
     
     function switchTab(activeTab, activeView) {
-        [tabDashboard, tabProducts, tabData].forEach(t => {
+        [tabDashboard, tabProducts, tabData, tabShop].forEach(t => {
             if (t) {
                 t.classList.remove('active');
                 t.style.borderBottomColor = 'transparent';
                 t.style.color = 'var(--text-secondary)';
             }
         });
-        [viewDashboard, viewProducts, viewData].forEach(v => {
+        [viewDashboard, viewProducts, viewData, viewShop].forEach(v => {
             if (v) v.style.display = 'none';
         });
         
@@ -66,12 +70,24 @@ document.addEventListener('DOMContentLoaded', () => {
             switchTab(tabData, viewData);
             renderDataManagementView();
         });
+
+        if (tabShop) {
+            tabShop.addEventListener('click', () => {
+                switchTab(tabShop, viewShop);
+                renderShopView();
+            });
+        }
     }
     
     // Dropdown change listener
     const modelDropdown = document.getElementById('model-dropdown');
     if (modelDropdown) {
         modelDropdown.addEventListener('change', renderProductView);
+    }
+
+    const shopDropdown = document.getElementById('shop-dropdown');
+    if (shopDropdown) {
+        shopDropdown.addEventListener('change', renderShopView);
     }
 });
 
@@ -131,6 +147,43 @@ function initCharts() {
             }
         }
     });
+
+    // Initialize Shop View Charts
+    const shopTrendCtx = document.getElementById('shopTrendChart');
+    if (shopTrendCtx) {
+        shopTrendChartInstance = new Chart(shopTrendCtx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+                }
+            }
+        });
+    }
+
+    const shopProductCtx = document.getElementById('shopProductChart');
+    if (shopProductCtx) {
+        shopProductChartInstance = new Chart(shopProductCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+                },
+                cutout: '70%',
+                borderWidth: 0
+            }
+        });
+    }
 }
 
 function handleFileUpload(event) {
@@ -717,3 +770,95 @@ window.renderDataManagementView = function() {
         tbody.appendChild(tr);
     });
 }
+
+window.renderShopView = function() {
+    if (!shopTrendChartInstance || !shopProductChartInstance) return;
+    
+    const dropdown = document.getElementById('shop-dropdown');
+    if (!dropdown) return;
+    
+    // Get unique stores
+    const uniqueStores = new Set();
+    globalSalesData.forEach(item => {
+        if (item.store && item.store !== 'Unknown') {
+            uniqueStores.add(item.store);
+        }
+    });
+    
+    const sortedStores = Array.from(uniqueStores).sort();
+    const currentSelection = dropdown.value;
+    
+    // Populate dropdown
+    dropdown.innerHTML = '<option value="">Select a Store...</option>';
+    sortedStores.forEach(store => {
+        const option = document.createElement('option');
+        option.value = store;
+        option.textContent = store;
+        dropdown.appendChild(option);
+    });
+    
+    if (sortedStores.includes(currentSelection)) {
+        dropdown.value = currentSelection;
+    }
+    
+    const selectedStore = dropdown.value;
+    
+    if (!selectedStore) {
+        shopTrendChartInstance.data.labels = [];
+        shopTrendChartInstance.data.datasets = [];
+        shopTrendChartInstance.update();
+        
+        shopProductChartInstance.data.labels = [];
+        shopProductChartInstance.data.datasets = [];
+        shopProductChartInstance.update();
+        return;
+    }
+    
+    // Filter data by store
+    const storeData = globalSalesData.filter(item => item.store === selectedStore);
+    
+    // Monthly Sales
+    const monthlySales = {};
+    storeData.forEach(item => {
+        if (!item.date || item.date === 'Unknown') return;
+        const month = item.date.substring(0, 7); // YYYY-MM
+        if (!monthlySales[month]) monthlySales[month] = 0;
+        monthlySales[month] += item.amt;
+    });
+    
+    const sortedMonths = Object.keys(monthlySales).sort();
+    const monthlyData = sortedMonths.map(m => monthlySales[m]);
+    
+    shopTrendChartInstance.data.labels = sortedMonths;
+    shopTrendChartInstance.data.datasets = [{
+        label: 'Monthly Sales (Net)',
+        data: monthlyData,
+        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: '#3b82f6',
+        borderWidth: 1
+    }];
+    shopTrendChartInstance.update();
+    
+    // Product Sales
+    const productSales = {};
+    storeData.forEach(item => {
+        const model = item.baseModel || item.product || 'Unknown';
+        if (!productSales[model]) productSales[model] = 0;
+        productSales[model] += item.amt;
+    });
+    
+    const topProducts = Object.keys(productSales)
+        .map(k => ({ product: k, amt: productSales[k] }))
+        .sort((a, b) => b.amt - a.amt)
+        .slice(0, 10);
+        
+    shopProductChartInstance.data.labels = topProducts.map(p => p.product);
+    shopProductChartInstance.data.datasets = [{
+        data: topProducts.map(p => p.amt),
+        backgroundColor: [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#06b6d4', '#f97316', '#14b8a6', '#6366f1', '#ec4899'
+        ]
+    }];
+    shopProductChartInstance.update();
+};
