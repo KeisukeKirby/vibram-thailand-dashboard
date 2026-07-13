@@ -25,7 +25,8 @@ window.supabaseAPI = {
             qty: item.qty,
             amt: parseFloat(item.amt),
             store: item.store,
-            sourceFile: item.source_file
+            sourceFile: item.source_file,
+            createdAt: item.created_at
         }));
     },
 

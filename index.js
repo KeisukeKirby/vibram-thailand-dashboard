@@ -421,7 +421,7 @@ async function appendData(data, filename) {
     try {
         await window.supabaseAPI.insertSalesData(globalSalesData.filter(i => i.sourceFile === filename));
     } catch (e) {
-        alert("Failed to save data to cloud database. It may only be visible locally.");
+        alert("Failed to save data to Supabase. Please ensure you have created the sales_data table by running 'supabase_schema.sql' in your Supabase SQL Editor. The data will only be visible locally until you refresh.");
     }
     renderDashboard();
 }
@@ -433,6 +433,9 @@ async function fetchDataFromSupabase() {
         document.getElementById('upload-status').textContent = `Loaded from cloud database`;
     } catch(e) {
         document.getElementById('upload-status').textContent = `Failed to load cloud data`;
+        console.error(e);
+        // Alert user about possible setup issue
+        alert("Failed to load data from Supabase. If you haven't yet, please run the SQL query from 'supabase_schema.sql' in your Supabase SQL Editor to create the tables.");
     }
     renderDashboard();
 }
@@ -806,7 +809,7 @@ window.renderDataManagementView = function() {
     if (!tbody) return;
     
     if (globalSalesData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 1rem;">No data uploaded yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 1rem;">No data uploaded yet.</td></tr>`;
         return;
     }
     
@@ -815,9 +818,13 @@ window.renderDataManagementView = function() {
     globalSalesData.forEach(item => {
         const f = item.sourceFile || 'Unknown Source (Legacy)';
         if (!fileStats[f]) {
-            fileStats[f] = 0;
+            fileStats[f] = { count: 0, date: item.createdAt };
         }
-        fileStats[f]++;
+        fileStats[f].count++;
+        // Use the latest date
+        if (item.createdAt && (!fileStats[f].date || new Date(item.createdAt) > new Date(fileStats[f].date))) {
+            fileStats[f].date = item.createdAt;
+        }
     });
     
     tbody.innerHTML = '';
@@ -826,12 +833,20 @@ window.renderDataManagementView = function() {
     const sortedFiles = Object.keys(fileStats).sort();
     
     sortedFiles.forEach(filename => {
+        const stats = fileStats[filename];
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
         
+        let displayDate = 'Unknown';
+        if (stats.date) {
+            const d = new Date(stats.date);
+            displayDate = d.toLocaleString(); // e.g. "7/13/2026, 11:42:00 AM"
+        }
+        
         tr.innerHTML = `
             <td style="padding: 1rem; color: #f8fafc;">${filename}</td>
-            <td style="padding: 1rem; color: var(--text-secondary);">${fileStats[filename].toLocaleString()} rows</td>
+            <td style="padding: 1rem; color: var(--text-secondary);">${displayDate}</td>
+            <td style="padding: 1rem; color: var(--text-secondary);">${stats.count.toLocaleString()} rows</td>
             <td style="padding: 1rem; text-align: right;">
                 <button onclick="deleteFile('${filename}')" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
                     <i class="fas fa-trash-alt"></i> Delete
